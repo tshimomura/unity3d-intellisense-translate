@@ -3,6 +3,8 @@
 統合開発環境でUnity用のプロジェクトを編集する際の、Intellisenseが表示するリファレンスを日本語化するためのファイル（以下、「日本語化ファイル」）を合成するツールです。
 （日本語化ファイルそのものではありません）
 
+![](./doc/rider.png)
+
 ## 超重要な注意事項
 
 このツールが合成した日本語化ファイルは、「再配布不可」です。（ユニティ・テクノロジーズ社にも確認済み）  
@@ -28,7 +30,7 @@ Visual Studio Code の場合は、うまく日本語化できません。
   - 2.4で確認
   - nokogiri の gem が必要なので、入ってない場合は `$ gem install nokogiri` すること
 - Unity公式の日本語版オフラインマニュアル
-  - Unityのバージョンに合わせたものを、公式サイト（https://docs.unity3d.com/ja/current/Manual/OfflineDocumentation.html）からダウンロードし、適当なフォルダに展開しておくこと
+  - Unityのバージョンに合わせたものを、公式サイト（ https://docs.unity3d.com/ja/current/Manual/OfflineDocumentation.html ）からダウンロードし、適当なフォルダに展開しておくこと
 
 
 ## 日本語化ファイルの合成手順
