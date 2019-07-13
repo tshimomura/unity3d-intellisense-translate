@@ -18,14 +18,16 @@ public class XmlGenerator
         }
 
         // 変換元のxmlファイルのリスト
-        var srcXmlFiles = from file in Directory.EnumerateFiles(srcXmlPath, "*.xml", SearchOption.AllDirectories) select new
-        {
-            FullPath = file,
-            RelativePath = file.Replace(srcXmlPath, "").Replace(Path.GetFileName(file), ""),
-            FileName = Path.GetFileName(file)
-        };
+        var srcXmlFiles = from file in Directory.EnumerateFiles(srcXmlPath, "*.xml", SearchOption.AllDirectories)
+            where !file.Replace(Path.GetFileName(file), "").EndsWith(language + Path.DirectorySeparatorChar)
+            select new
+            {
+                FullPath = file,
+                RelativePath = file.Replace(srcXmlPath, "").Replace(Path.GetFileName(file), ""),
+                FileName = Path.GetFileName(file)
+            };
 
-        int count = 0;
+        int count = 1;
         int max = srcXmlFiles.Count();
         
         foreach (var f in srcXmlFiles)
@@ -41,20 +43,13 @@ public class XmlGenerator
                 Directory.CreateDirectory(outputPath);
             }
 
-            EditorUtility.DisplayProgressBar(
-                "Mixing Reference XML files",
-                f.FileName,
-                count / (float) max
-            );
-
-            Translate(f.FullPath, outputPath + "/" + f.FileName, referencePath);
-
+//            Debug.Log(f);
+            Translate(f.FullPath, outputPath + "/" + f.FileName, referencePath, count.ToString() + "/" + srcXmlFiles.Count().ToString());
             count++;
         }     
-        EditorUtility.ClearProgressBar();
     }
 
-    public static void Translate(string srcFile, string dstFile, string referencePath)
+    public static void Translate(string srcFile, string dstFile, string referencePath, string progressStr)
     {
         Hashtable replace_hash = new Hashtable
         {
@@ -75,6 +70,7 @@ public class XmlGenerator
         
         XmlNode root = doc.DocumentElement;
         XmlNodeList nodeList = root.SelectNodes("members/member");
+        int count = 0;
         foreach (XmlNode member in nodeList)
         {
 //            Debug.Log(member.Attributes["name"].Value);
@@ -86,14 +82,16 @@ public class XmlGenerator
                 string keyword = m.Groups[2].Value;
                 string append = "";
                 string filename = "";
+                string clazz = "";
+                string field;
 
                 // XML内のメンバーに対応する、HTMLリファレンスのファイル名を決める
                 if (keyword.Contains("."))
                 {
                     r = new Regex(@"([\w\.]+)\.\#*([\w]*).*?(\`*(\d*))", RegexOptions.IgnoreCase);
                     m = r.Match(keyword);
-                    string clazz = m.Groups[1].Value;
-                    string field = m.Groups[2].Value;
+                    clazz = m.Groups[1].Value;
+                    field = m.Groups[2].Value;
 
                     if (m.Groups[3].Value.Length > 0)
                     {
@@ -110,7 +108,7 @@ public class XmlGenerator
                     }
                     else if (field[0] == field.ToUpper()[0] || field == "iOS" || field == "tvOS")
                     {
-                        filename = clazz + '.' + field;
+                        filename = clazz + "." + field;
                     }
                     else
                     {
@@ -184,10 +182,20 @@ public class XmlGenerator
                             }
                         }
                     }
+                    
+                    EditorUtility.DisplayProgressBar(
+                        "Mixing Reference XML files [" + progressStr + "]",
+                        clazz,
+                        count / (float) nodeList.Count
+                    );
                 }
             }
+
+            count++;
         }
 
         doc.Save(dstFile);
+
+        EditorUtility.ClearProgressBar();
     }
 }

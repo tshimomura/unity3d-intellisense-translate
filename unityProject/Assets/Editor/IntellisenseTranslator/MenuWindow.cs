@@ -14,7 +14,7 @@ public class MenuWindow : EditorWindow
     private static string editorPath;
     private static string editorVersion;
     private static string language;
-    private static string workPath = Directory.GetCurrentDirectory() + @"/Temp/" + functionName;
+    private static string workPath = Directory.GetCurrentDirectory() + "/" + functionName;
 
     [MenuItem("Help/" + functionName)]
     private static void ShowMenu()
@@ -43,7 +43,7 @@ public class MenuWindow : EditorWindow
         GUILayout.Label("Install", EditorStyles.boldLabel);
 
         GUILayout.Label("Step 1");
-        if (GUILayout.Button("Generate language files"))
+        if (GUILayout.Button("Generate xml files"))
         {
             Generate();
         }
@@ -69,7 +69,7 @@ public class MenuWindow : EditorWindow
 
         GUILayout.Label("Uninstall", EditorStyles.boldLabel);
         EditorGUI.BeginDisabledGroup(true);
-        if (GUILayout.Button("Uninstall language files"))
+        if (GUILayout.Button("Show install script"))
         {
             
         }
@@ -114,8 +114,13 @@ public class MenuWindow : EditorWindow
         {
             XmlGenerator.Translate("C:/Program Files/Unity/Hub/Editor/2018.4.3f1/Editor/Data/Managed/UnityEngine/UnityEngine.GridModule.xml",
                 workPath + "/xml/UnityEngine.GridModule.xml",
-                workPath + "/ScriptReference/"
+                workPath + "/ScriptReference/",
+                ""
                 );
+        }
+        if (GUILayout.Button("Generate batch"))
+        {
+            GenerateBatch();
         }
     }
 
@@ -141,6 +146,25 @@ public class MenuWindow : EditorWindow
         
         // Unity内部のXmlリファレンスとダウンロードしたHtmlの翻訳済みリファレンスから、翻訳済みXmlを合成
         XmlGenerator.Generate(editorPath + "/Data/Managed/", workPath + "/xml/", language, workPath + "/ScriptReference/");
+    }
+
+    private static void GenerateBatch()
+    {
+        string batchFile;
+
+        if (Application.platform == RuntimePlatform.WindowsEditor)
+        {
+            batchFile = workPath + "/install.bat";
+        }
+        else
+        {
+            batchFile = workPath + "/install.sh";
+        }
+        
+        StreamWriter sw = File.CreateText(batchFile);
+        sw.WriteLine("xcopy /Y /S /E \"" + workPath + "/xml/" + "\" \"" + editorPath + "/Data/Managed/\"");
+// xcopy /Y /S /E "C:\work\ts\unity3d-intellisense-translate\unityProject\Intellisense Translator(unofficial)\xml" "C:\Program Files\Unity2018.4.3f1\Editor\Data\Managed"
+        sw.Close();
     }
  
     private void Clean(string targetPath)

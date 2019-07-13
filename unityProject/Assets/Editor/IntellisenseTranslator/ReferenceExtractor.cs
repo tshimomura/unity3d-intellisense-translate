@@ -26,43 +26,46 @@ public class ReferenceExtractor
         using (s = new ZipInputStream(File.OpenRead(zipfile)))
         {
             while ((theEntry = s.GetNextEntry()) != null) {
+
                 try
                 {
                     string directoryName = Path.GetDirectoryName(theEntry.Name);
                     string fileName      = Path.GetFileName(theEntry.Name);
 
-                    // create directory
-                    if ( directoryName.Length > 0 ) {
-                        Directory.CreateDirectory(targetPath + "/" + directoryName);
-                    }
-
-                    if (fileName != String.Empty)
+                    if (directoryName.StartsWith("ScriptReference"))
                     {
-                        using (FileStream streamWriter = File.Create(targetPath + "/" + theEntry.Name))
-                        {
+                        // create directory
+                        if ( directoryName.Length > 0 ) {
+                            Directory.CreateDirectory(targetPath + "/" + directoryName);
+                        }
 
-                            int size = 8192;
-                            byte[] data = new byte[8192];
-                            while (true)
+                        if (fileName != String.Empty)
+                        {
+                            using (FileStream streamWriter = File.Create(targetPath + "/" + theEntry.Name))
                             {
-                                size = s.Read(data, 0, data.Length);
-                                if (size > 0)
+
+                                int size = 8192;
+                                byte[] data = new byte[8192];
+                                while (true)
                                 {
-                                    streamWriter.Write(data, 0, size);
-                                }
-                                else
-                                {
-                                    break;
+                                    size = s.Read(data, 0, data.Length);
+                                    if (size > 0)
+                                    {
+                                        streamWriter.Write(data, 0, size);
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
                                 }
                             }
                         }
-
-                        EditorUtility.DisplayProgressBar(
-                            "Extracting Reference",
-                            theEntry.Name,
-                            count / (float) fileNum
-                        );
                     }
+                    EditorUtility.DisplayProgressBar(
+                        "Extracting Reference",
+                        theEntry.Name,
+                        count / (float) fileNum
+                    );
                 }
                 catch (Exception)
                 {
