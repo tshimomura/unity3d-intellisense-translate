@@ -1,44 +1,41 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Text.RegularExpressions;
-using System.Xml;
 using UnityEngine;
 using UnityEditor;
 
 public class MenuWindow : EditorWindow
 {
-    private const string functionName = "Intellisense Translator(unofficial)";
-    private static string editorPath;
-    private static string editorVersion;
-    private static string language;
-    private static string workPath = Directory.GetCurrentDirectory() + "/" + functionName;
+    private const string FunctionName = "Intellisense Help Translator";
+    private static string _editorPath;
+    private static string _editorVersion;
+    private static string _language;
+    private static string _workPath = Utility.ConvertPath(Directory.GetCurrentDirectory() + "/Temp/" + FunctionName);
 
-    [MenuItem("Help/" + functionName)]
+    [MenuItem("Help/" + FunctionName)]
     private static void ShowMenu()
     {
-        GetWindow<MenuWindow>(functionName);
+        GetWindow<MenuWindow>(FunctionName);
     }
 
     private void Awake()
     {
-        editorPath = System.AppDomain.CurrentDomain.BaseDirectory;
-        language = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        _editorPath = System.AppDomain.CurrentDomain.BaseDirectory;
+        
+        // TODO macOSでも取れる？
+        _language = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
 
         // 欲しいのは "2018.4.3f1" のうち "2018.4" の部分 
         Regex r = new Regex(@"\d+\.\d+", RegexOptions.IgnoreCase);
         Match m = r.Match(UnityEngine.Application.unityVersion);
         if (m.Success)
         {
-            editorVersion = m.Groups[0].Value;
+            _editorVersion = m.Groups[0].Value;
         }
     }
 
     private void OnGUI()
     {
-        Awake();
+//        Awake();
 
         GUILayout.Label("Install", EditorStyles.boldLabel);
 
@@ -48,20 +45,28 @@ public class MenuWindow : EditorWindow
             Generate();
         }
 
+        // TODO バッチを実行するのか表示するのか
         GUILayout.Label("Step 2");
         if (GUILayout.Button("Show install script"))
         {
-            string path = workPath + "/xml/";
+            string path = Utility.ConvertPath(_workPath + "/");
             if (Application.platform == RuntimePlatform.WindowsEditor)
             {
-                EditorUtility.RevealInFinder(path + "install.sh");
+                var proc = new System.Diagnostics.Process();
+
+                proc.StartInfo.FileName = path + "install.bat";
+                proc.StartInfo.Verb = "RunAs";
+                proc.StartInfo.UseShellExecute = true;
+                proc.Start();
             }
             else if (Application.platform == RuntimePlatform.OSXEditor)
             {
-                System.Diagnostics.Process.Start(path + "install.bat");
+                EditorUtility.RevealInFinder(path + "install.sh");
+                // TODO macOS
             }
             else if (Application.platform == RuntimePlatform.LinuxEditor)
             {
+                // TODO linux
             }
         }
 
@@ -74,47 +79,54 @@ public class MenuWindow : EditorWindow
             
         }
         EditorGUI.EndDisabledGroup();
-        
+
         GUILayout.Space(10);
 
 //        EditorGUI.BeginDisabledGroup(true);
         if (GUILayout.Button("Clean temporary files"))
         {
-            Clean(workPath);
+            Clean(_workPath);
         }
 //        EditorGUI.EndDisabledGroup();
         
         GUILayout.Space(10);
         GUILayout.Label("Information", EditorStyles.boldLabel);
         EditorGUI.BeginDisabledGroup(true);
-        EditorGUILayout.TextField("UnityEditor path", editorPath);
-        EditorGUILayout.TextField("Unity version", editorVersion);
-        EditorGUILayout.TextField("Target language", language);
+        EditorGUILayout.TextField("UnityEditor path", _editorPath);
+        EditorGUILayout.TextField("Unity generation", _editorVersion);
+        EditorGUILayout.TextField("Target language", _language);
+        EditorGUILayout.TextField("work path", _workPath);
+        EditorGUI.EndDisabledGroup();
 
         GUILayout.Space(10);
 
-        EditorGUILayout.TextArea("Special thanks to\n\nSharpZipLib\nhttp://icsharpcode.github.io/SharpZipLib/\n\nHtmlAgilityPack\nhttps://github.com/zzzprojects/html-agility-pack");
+        GUILayout.Label("Special thanks to", EditorStyles.boldLabel);
+        EditorGUI.BeginDisabledGroup(true);
+        EditorGUILayout.TextArea("SharpZipLib\nhttp://icsharpcode.github.io/SharpZipLib/\n\nHtmlAgilityPack\nhttps://github.com/zzzprojects/html-agility-pack");
         EditorGUI.EndDisabledGroup();
 
         // for test
         GUILayout.Space(10);
         if (GUILayout.Button("Open Unity Editor folder"))
         {
-            EditorUtility.RevealInFinder(editorPath + "/Data/");
+            EditorUtility.RevealInFinder(Utility.ConvertPath(_editorPath + "/Data/"));
         }
         if (GUILayout.Button("Clean xml folder"))
         {
-            Clean(workPath + "/xml/");
+            Clean(Utility.ConvertPath(_workPath + "/xml/"));
         }
         if (GUILayout.Button("GenerateXml"))
         {
-            XmlGenerator.Generate(editorPath + "/Data/Managed/", workPath + "/xml/", language, workPath + "/ScriptReference/");
+            XmlGenerator.Generate(Utility.ConvertPath(_editorPath + "/Data/Managed/"),
+                Utility.ConvertPath(_workPath + "/xml/"),
+                _language,
+                Utility.ConvertPath(_workPath + "/ScriptReference/"));
         }
         if (GUILayout.Button("TranslateXml"))
         {
             XmlGenerator.Translate("C:/Program Files/Unity/Hub/Editor/2018.4.3f1/Editor/Data/Managed/UnityEngine/UnityEngine.GridModule.xml",
-                workPath + "/xml/UnityEngine.GridModule.xml",
-                workPath + "/ScriptReference/",
+                Utility.ConvertPath(_workPath + "/xml/UnityEngine.GridModule.xml"),
+                Utility.ConvertPath(_workPath + "/ScriptReference/"),
                 ""
                 );
         }
@@ -127,44 +139,57 @@ public class MenuWindow : EditorWindow
     private void Generate()
     {
         // 作業フォルダを作る
-        if (!Directory.Exists(workPath))
+        if (!Directory.Exists(_workPath))
         {
-            Directory.CreateDirectory(workPath);
+            Directory.CreateDirectory(_workPath);
         }
 
         // 公式からリファレンスをダウンロード
         ReferenceDownloader.Download(
-            "https://storage.googleapis.com/localized_docs/" + language + "/" + editorVersion + "/UnityDocumentation.zip",
-            workPath + "/UnityDocumentation.zip"
+            "https://storage.googleapis.com/localized_docs/" + _language + "/" + _editorVersion + "/UnityDocumentation.zip",
+            Utility.ConvertPath(_workPath + "/UnityDocumentation.zip")
             );
     }
 
     public static void DownloadComplete()
     {
         // ダウンロードが終わったらzipを展開
-        ReferenceExtractor.Unzip(workPath + "/UnityDocumentation.zip", workPath);
+        ReferenceExtractor.Unzip(Utility.ConvertPath(_workPath + "/UnityDocumentation.zip"), _workPath);
         
         // Unity内部のXmlリファレンスとダウンロードしたHtmlの翻訳済みリファレンスから、翻訳済みXmlを合成
-        XmlGenerator.Generate(editorPath + "/Data/Managed/", workPath + "/xml/", language, workPath + "/ScriptReference/");
+        XmlGenerator.Generate(Utility.ConvertPath(_editorPath + "/Data/Managed/"),
+            Utility.ConvertPath(_workPath + "/xml/"),
+            _language,
+            Utility.ConvertPath(_workPath + "/ScriptReference/")
+            );
+
+        GenerateBatch();
     }
 
     private static void GenerateBatch()
     {
         string batchFile;
+        StreamWriter sw;
 
         if (Application.platform == RuntimePlatform.WindowsEditor)
         {
-            batchFile = workPath + "/install.bat";
+            batchFile = Utility.ConvertPath(_workPath + "/install.bat");
+            sw = File.CreateText(batchFile);
+            sw.WriteLine("xcopy /Y /S /E \"" + Utility.ConvertPath(_workPath + "/xml") + "\" \"" + Utility.ConvertPath(_editorPath + "/Data/Managed") + "\"");
+            sw.Close();
         }
-        else
+        else if (Application.platform == RuntimePlatform.OSXEditor)
         {
-            batchFile = workPath + "/install.sh";
+            batchFile = Utility.ConvertPath(_workPath + "/install.sh");
+            sw = File.CreateText(batchFile);
+            // TODO macOS
+            sw.WriteLine("sudo cp -pr \"" + Utility.ConvertPath(_workPath + "/xml") + "\" \"" + Utility.ConvertPath(_editorPath + "/Data/Managed") + "\"");
+            sw.Close();
         }
-        
-        StreamWriter sw = File.CreateText(batchFile);
-        sw.WriteLine("xcopy /Y /S /E \"" + workPath + "/xml/" + "\" \"" + editorPath + "/Data/Managed/\"");
-// xcopy /Y /S /E "C:\work\ts\unity3d-intellisense-translate\unityProject\Intellisense Translator(unofficial)\xml" "C:\Program Files\Unity2018.4.3f1\Editor\Data\Managed"
-        sw.Close();
+        else if (Application.platform == RuntimePlatform.LinuxEditor)
+        {
+            // TODO linux
+        }
     }
  
     private void Clean(string targetPath)

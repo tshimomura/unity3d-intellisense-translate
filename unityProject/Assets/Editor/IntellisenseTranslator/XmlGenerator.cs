@@ -1,11 +1,9 @@
 ﻿using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml;
 using HtmlAgilityPack;
-using UnityEngine;
 using UnityEditor;
 
 public class XmlGenerator
@@ -73,8 +71,6 @@ public class XmlGenerator
         int count = 0;
         foreach (XmlNode member in nodeList)
         {
-//            Debug.Log(member.Attributes["name"].Value);
-
             Regex r = new Regex(@"(UnityEngine|UnityEditor)\.(.*)", RegexOptions.IgnoreCase);
             Match m = r.Match(member.Attributes["name"].Value);
             if (m.Success)
