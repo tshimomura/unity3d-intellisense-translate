@@ -6,7 +6,7 @@ using UnityEditor;
 public class MenuWindow : EditorWindow
 {
     private const string FunctionName = "Intellisense Help Translator";
-    private static string _editorPath;
+    private static string _managedDllPath;
     private static string _editorVersion;
     private static string _language;
     private static string _workPath = Utility.ConvertPath(Directory.GetCurrentDirectory() + "/Temp/" + FunctionName);
@@ -19,10 +19,24 @@ public class MenuWindow : EditorWindow
 
     private void Awake()
     {
-        _editorPath = System.AppDomain.CurrentDomain.BaseDirectory;
-        
-        // TODO macOSでも取れる？
-        _language = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        if (Application.platform == RuntimePlatform.WindowsEditor)
+        {
+            _managedDllPath = Utility.ConvertPath(System.AppDomain.CurrentDomain.BaseDirectory + "/Data/Managed");
+        }
+        else if (Application.platform == RuntimePlatform.OSXEditor)
+        {
+            // TODO macOS
+            _managedDllPath = Utility.ConvertPath(System.AppDomain.CurrentDomain.BaseDirectory + "/Unity/Contents/Managed");
+        }
+        else if (Application.platform == RuntimePlatform.LinuxEditor)
+        {
+            // TODO linux
+            _managedDllPath = System.AppDomain.CurrentDomain.BaseDirectory;
+        }
+
+        // TODO: macOSだと en が返ってきちゃう & 中国語だと 2文字じゃなく zh_CN ?
+        // _language = System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+        _language = "ja"; // es, ko, zh_CN(?)
 
         // 欲しいのは "2018.4.3f1" のうち "2018.4" の部分 
         Regex r = new Regex(@"\d+\.\d+", RegexOptions.IgnoreCase);
@@ -92,7 +106,7 @@ public class MenuWindow : EditorWindow
         GUILayout.Space(10);
         GUILayout.Label("Information", EditorStyles.boldLabel);
         EditorGUI.BeginDisabledGroup(true);
-        EditorGUILayout.TextField("UnityEditor path", _editorPath);
+        EditorGUILayout.TextField("Managed Dll path", _managedDllPath);
         EditorGUILayout.TextField("Unity generation", _editorVersion);
         EditorGUILayout.TextField("Target language", _language);
         EditorGUILayout.TextField("work path", _workPath);
@@ -109,7 +123,7 @@ public class MenuWindow : EditorWindow
         GUILayout.Space(10);
         if (GUILayout.Button("Open Unity Editor folder"))
         {
-            EditorUtility.RevealInFinder(Utility.ConvertPath(_editorPath + "/Data/"));
+            EditorUtility.RevealInFinder(_managedDllPath);
         }
         if (GUILayout.Button("Clean xml folder"))
         {
@@ -117,7 +131,7 @@ public class MenuWindow : EditorWindow
         }
         if (GUILayout.Button("GenerateXml"))
         {
-            XmlGenerator.Generate(Utility.ConvertPath(_editorPath + "/Data/Managed/"),
+            XmlGenerator.Generate(Utility.ConvertPath(_managedDllPath + "/"),
                 Utility.ConvertPath(_workPath + "/xml/"),
                 _language,
                 Utility.ConvertPath(_workPath + "/ScriptReference/"));
@@ -157,7 +171,7 @@ public class MenuWindow : EditorWindow
         ReferenceExtractor.Unzip(Utility.ConvertPath(_workPath + "/UnityDocumentation.zip"), _workPath);
         
         // Unity内部のXmlリファレンスとダウンロードしたHtmlの翻訳済みリファレンスから、翻訳済みXmlを合成
-        XmlGenerator.Generate(Utility.ConvertPath(_editorPath + "/Data/Managed/"),
+        XmlGenerator.Generate(Utility.ConvertPath(_managedDllPath + "/"),
             Utility.ConvertPath(_workPath + "/xml/"),
             _language,
             Utility.ConvertPath(_workPath + "/ScriptReference/")
@@ -175,7 +189,7 @@ public class MenuWindow : EditorWindow
         {
             batchFile = Utility.ConvertPath(_workPath + "/install.bat");
             sw = File.CreateText(batchFile);
-            sw.WriteLine("xcopy /Y /S /E \"" + Utility.ConvertPath(_workPath + "/xml") + "\" \"" + Utility.ConvertPath(_editorPath + "/Data/Managed") + "\"");
+            sw.WriteLine("xcopy /Y /S /E \"" + Utility.ConvertPath(_workPath + "/xml") + "\" \"" + _managedDllPath + "\"");
             sw.Close();
         }
         else if (Application.platform == RuntimePlatform.OSXEditor)
@@ -183,7 +197,7 @@ public class MenuWindow : EditorWindow
             batchFile = Utility.ConvertPath(_workPath + "/install.sh");
             sw = File.CreateText(batchFile);
             // TODO macOS
-            sw.WriteLine("sudo cp -pr \"" + Utility.ConvertPath(_workPath + "/xml") + "\" \"" + Utility.ConvertPath(_editorPath + "/Data/Managed") + "\"");
+            sw.WriteLine("sudo cp -pr \"" + Utility.ConvertPath(_workPath + "/xml") + "\" \"" + _managedDllPath + "\"");
             sw.Close();
         }
         else if (Application.platform == RuntimePlatform.LinuxEditor)
